@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "icoFoam.C": "cpp",
+        "myIcoFoam.C": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}

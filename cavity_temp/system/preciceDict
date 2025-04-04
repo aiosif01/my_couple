@@ -1,0 +1,28 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      preciceDict;
+}
+
+preciceConfig "/home/ale/my_couple/precice-config.xml";
+
+participant cavity_temp;
+
+modules (FP);
+
+interfaces
+{
+  Interface1
+  {
+    mesh              VolumeMesh;
+    patches           ();            // Leave empty for volumetric exchange
+    cellSets          (box1);        // Defined by topoSet
+    locations         volumeCenters;
+
+    readData ();
+    writeData (Temperature);        // Writing scalar temperature
+  };
+}

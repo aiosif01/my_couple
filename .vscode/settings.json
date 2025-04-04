@@ -1,3 +1,14 @@
 {
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "controlDict": "cpp",
+        "myPoissonFoam.C": "cpp",
+        "Utilities.C": "cpp",
+        "ModuleFF.C": "cpp",
+        "FP.C": "cpp",
+        "ParticlePoints.C": "cpp",
+        "Adapter.C": "cpp",
+        "precicedict": "cpp"
+    },
+    "cmake.ignoreCMakeListsMissing": true
 }

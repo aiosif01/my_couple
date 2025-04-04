@@ -1,30 +1,43 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <precice-configuration>
   <log>
-    <sink type="stream" output="stdout" filter="%Severity% > debug" format="preCICE:%ColorizedSeverity% %Message%" enabled="true" />
+    <sink
+      filter="%Severity% > debug and %Rank% = 0"
+      format="---[precice] %ColorizedSeverity% %Message%"
+      enabled="true" />
   </log>
 
-  <data:vector name="Force" />
-  <data:vector name="Stress" />
+  <data:scalar name="Temperature" />
 
-  <mesh name="Cavity-Mesh" dimensions="3">
-    <use-data name="Force" />
-    <use-data name="Stress" />
+  <mesh name="VolumeMesh" dimensions="3">
+    <use-data name="Temperature" />
   </mesh>
 
-  <participant name="Cavity">
-    <provide-mesh name="Cavity-Mesh" />
-    <write-data name="Force" mesh="Cavity-Mesh" />
-    <read-data name="Stress" mesh="Cavity-Mesh" />
+  <mesh name="CellMesh" dimensions="3">
+    <use-data name="Temperature" />
+  </mesh>
+
+  <participant name="cavity_temp">
+    <provide-mesh name="VolumeMesh" />
+    <write-data name="Temperature" mesh="VolumeMesh" />
   </participant>
 
-  <m2n:sockets acceptor="Cavity" connector="dummy" />
+  <participant name="cells">
+    <provide-mesh name="CellMesh" />
+    <read-data name="Temperature" mesh="CellMesh" />
+    <mapping:nearest-neighbor
+      direction="read"
+      from="VolumeMesh"
+      to="CellMesh"
+      constraint="consistent" />
+  </participant>
+
+  <m2n:sockets acceptor="cavity_temp" connector="cells" exchange-directory=".." />
 
   <coupling-scheme:serial-explicit>
-    <participants first="Cavity" second="dummy" />
-    <max-time-windows value="100" />
-    <time-window-size value="0.005" />
-    <exchange data="Force" mesh="Cavity-Mesh" from="Cavity" to="dummy" />
-    <exchange data="Stress" mesh="Cavity-Mesh" from="dummy" to="Cavity" />
+    <participants first="cavity_temp" second="cells" />
+    <exchange data="Temperature" mesh="VolumeMesh" from="cavity_temp" to="cells" />
+    <time-window-size value="0.001" />
+    <max-time value="1.0" />
   </coupling-scheme:serial-explicit>
 </precice-configuration>

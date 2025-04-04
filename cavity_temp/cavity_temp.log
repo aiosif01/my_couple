@@ -1,0 +1,187 @@
+Started on: Fri, 04 Apr 2025 04:21:54 +0300
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2406                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9bfe8264-20241212 OPENFOAM=2406 patch=241212 version=2406
+Arch   : "LSB;label=32;scalar=64"
+Exec   : blockMesh
+Date   : Apr 04 2025
+Time   : 04:21:54
+Host   : ale-ubuntu22
+PID    : 24702
+I/O    : uncollated
+Case   : /home/ale/my_couple/cavity_temp
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Creating block mesh from "system/blockMeshDict"
+Creating block edges
+No non-planar block faces defined
+Creating topology blocks
+
+Creating topology patches - from boundary section
+
+Creating block mesh topology
+
+Check topology
+
+	Basic statistics
+		Number of internal faces : 0
+		Number of boundary faces : 6
+		Number of defined boundary faces : 6
+		Number of undefined boundary faces : 0
+	Checking patch -> block consistency
+
+Creating block offsets
+Creating merge list (topological search)...
+Deleting polyMesh directory "constant/polyMesh"
+
+Creating polyMesh from blockMesh
+Creating patches
+Creating cells
+Creating points with scale (1 1 1)
+    Block 0 cell size :
+        i : 0.02 .. 0.02
+        j : 0.02 .. 0.02
+        k : 0.02 .. 0.02
+
+No patch pairs to merge
+
+Writing polyMesh with 0 cellZones
+----------------
+Mesh Information
+----------------
+  boundingBox: (0 0 0) (1 1 1)
+  nPoints: 132651
+  nCells: 125000
+  nFaces: 382500
+  nInternalFaces: 367500
+----------------
+Patches
+----------------
+  patch 0 (start: 367500 size: 2500) name: leftWall
+  patch 1 (start: 370000 size: 2500) name: rightWall
+  patch 2 (start: 372500 size: 2500) name: bottomWall
+  patch 3 (start: 375000 size: 2500) name: topWall
+  patch 4 (start: 377500 size: 5000) name: frontAndBack
+
+End
+
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2406                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9bfe8264-20241212 OPENFOAM=2406 patch=241212 version=2406
+Arch   : "LSB;label=32;scalar=64"
+Exec   : topoSet
+Date   : Apr 04 2025
+Time   : 04:21:56
+Host   : ale-ubuntu22
+PID    : 24719
+I/O    : uncollated
+Case   : /home/ale/my_couple/cavity_temp
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create polyMesh for time = 0
+
+Reading topoSetDict
+
+Time = 0
+    mesh not changed.
+Created cellSet box1
+    Applying source boxToCell
+    Adding cells with centre within boxes 1((0 0 0) (1 1 1))
+    cellSet box1 now size 125000
+
+End
+
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2406                                  |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _9bfe8264-20241212 OPENFOAM=2406 patch=241212 version=2406
+Arch   : "LSB;label=32;scalar=64"
+Exec   : myPoissonFoam
+Date   : Apr 04 2025
+Time   : 04:21:56
+Host   : ale-ubuntu22
+PID    : 24728
+I/O    : uncollated
+Case   : /home/ale/my_couple/cavity_temp
+nProcs : 1
+trapFpe: Floating point exception trapping enabled (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 5, maxFileModificationPolls 20)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Create mesh for time = 0
+
+Reading transportProperties
+
+Reading field Temperature
+
+
+Starting transient iteration loop
+
+---[preciceAdapter] Loaded the OpenFOAM-preCICE adapter - v1.3.1.
+[PRINT] Adapter::configure() - START
+Adapter::configFileRead() - START
+---[preciceAdapter] Reading preciceDict...
+Adapter::configFileRead() - FP module IS enabled
+Adapter::configFileRead() - About to create FP::FluidParticle
+Adapter::configFileRead() - Successfully created FP::FluidParticle
+Adapter::configFileRead() - About to call FP_->configure()
+Adapter::configFileRead() - Successfully called FP_->configure()
+Adapter::configFileRead() - END
+[PRINT] Adapter::configure() - configFileRead() completed OK
+[PRINT] Adapter::configure() - About to create precice::Participant
+[PRINT] Adapter::configure() - Participant Name = cavity_temp
+[PRINT] Adapter::configure() - Config File = /home/ale/my_couple/precice-config.xml
+[PRINT] Adapter::configure() - Rank = 0, Size = 1
+[stack trace]
+=============
+#1  Foam::sigSegv::sigHandler(int) in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+#2  ? in /lib/x86_64-linux-gnu/libc.so.6
+#3  ? in /lib/x86_64-linux-gnu/libprecice.so.3
+#4  ? in /lib/x86_64-linux-gnu/libprecice.so.3
+#5  ? in /lib/x86_64-linux-gnu/libprecice.so.3
+#6  ? in /lib/x86_64-linux-gnu/libprecice.so.3
+#7  ? in /lib/x86_64-linux-gnu/libprecice.so.3
+#8  precice::Participant::Participant(precice::span<char const, 18446744073709551615ul>, precice::span<char const, 18446744073709551615ul>, int, int) in /lib/x86_64-linux-gnu/libprecice.so.3
+#9  preciceAdapter::Adapter::configure() in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
+#10  Foam::functionObjects::preciceAdapterFunctionObject::read(Foam::dictionary const&) in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
+#11  Foam::functionObjects::preciceAdapterFunctionObject::preciceAdapterFunctionObject(Foam::word const&, Foam::Time const&, Foam::dictionary const&) in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
+#12  Foam::functionObject::adddictionaryConstructorToTable<Foam::functionObjects::preciceAdapterFunctionObject>::New(Foam::word const&, Foam::Time const&, Foam::dictionary const&) in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
+#13  Foam::functionObject::New(Foam::word const&, Foam::Time const&, Foam::dictionary const&) in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+#14  Foam::functionObjectList::read() in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+#15  Foam::Time::run() const in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+#16  Foam::Time::loop() in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
+#17  ? in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/bin/myPoissonFoam
+#18  ? in /lib/x86_64-linux-gnu/libc.so.6
+#19  __libc_start_main in /lib/x86_64-linux-gnu/libc.so.6
+#20  ? in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/bin/myPoissonFoam
+=============
+Segmentation fault (core dumped)
