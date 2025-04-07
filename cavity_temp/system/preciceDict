@@ -7,11 +7,13 @@ FoamFile
     object      preciceDict;
 }
 
-preciceConfig "/home/ale/my_couple/precice-config.xml";
+// preciceConfig "/home/ale/my_couple/precice-config.xml";
+preciceConfig "../precice-config.xml";
 
 participant cavity_temp;
 
 modules (FP);
+// modules (FF);
 
 interfaces
 {
