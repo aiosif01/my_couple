@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         // Define the transient diffusion equation
         fvScalarMatrix TEqn
         (
-            fvm::ddt(Temperature) - fvm::laplacian(alpha, Temperature)
+            fvm::ddt(T) - fvm::laplacian(alpha, T)
         );
 
         // Solve the equation

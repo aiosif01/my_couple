@@ -21,11 +21,11 @@ dimensionedScalar alpha
 
 Info<< "Reading field Temperature\n" << endl;
 
-volScalarField Temperature
+volScalarField T
 (
     IOobject
     (
-        "Temperature",
+        "T",
         runTime.timeName(),
         mesh,
         IOobject::MUST_READ,

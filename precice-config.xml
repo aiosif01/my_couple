@@ -9,19 +9,19 @@
 
   <profiling mode="fundamental" synchronize="false" />
 
-  <data:scalar name="Temperature" />
+  <data:scalar name="T" />
 
   <mesh name="VolumeMesh" dimensions="3">
-    <use-data name="Temperature" />
+    <use-data name="T" />
   </mesh>
 
   <mesh name="CellMesh" dimensions="3">
-    <use-data name="Temperature" />
+    <use-data name="T" />
   </mesh>
 
   <participant name="cavity_temp">
     <provide-mesh name="VolumeMesh" />
-    <write-data name="Temperature" mesh="VolumeMesh" />
+    <write-data name="T" mesh="VolumeMesh" />
   </participant>
 
   <participant name="cells">
@@ -32,7 +32,7 @@
       from="VolumeMesh"
       to="CellMesh"
       constraint="consistent" />
-    <read-data name="Temperature" mesh="CellMesh" />
+    <read-data name="T" mesh="CellMesh" />
   </participant>
 
   <m2n:sockets acceptor="cavity_temp" connector="cells" exchange-directory=".." />
@@ -41,6 +41,6 @@
     <time-window-size value="0.001" />
     <max-time value="1.0" />
     <participants first="cavity_temp" second="cells" />
-    <exchange data="Temperature" mesh="VolumeMesh" from="cavity_temp" to="cells" />
+    <exchange data="T" mesh="VolumeMesh" from="cavity_temp" to="cells" />
   </coupling-scheme:serial-explicit>
 </precice-configuration>

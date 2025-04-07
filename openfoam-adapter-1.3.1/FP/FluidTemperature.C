@@ -129,7 +129,7 @@ bool FluidTemperature::isLocationTypeSupported(const bool meshConnectivity) cons
 std::string FluidTemperature::getDataName() const
 {
     // Ensure this matches the name used in preciceDict and FP::addWriters
-    return "Temperature"; // Or just "FluidTemperature" if preferred
+    return "T"; // Or just "FluidTemperature" if preferred
 }
 
 // Initialize method (likely not needed for reading a standard field)

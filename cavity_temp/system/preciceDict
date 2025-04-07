@@ -25,6 +25,6 @@ interfaces
     locations         volumeCenters;
 
     readData ();
-    writeData (Temperature);        // Writing scalar temperature
+    writeData (T);        // Writing scalar temperature
   };
 }

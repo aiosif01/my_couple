@@ -44,7 +44,7 @@ bool FluidParticle::addWriters(std::string dataName, Interface* interface)
     DEBUG(adapterInfo("FP Module: Checking writer for data: " + dataName, "debug"));
     bool found = false;
 
-    if (dataName == "Temperature") // Data OF sends
+    if (dataName == "T") // Data OF sends
     {
         interface->addCouplingDataWriter(dataName, new FluidTemperature(mesh_, nameT_));
         DEBUG(adapterInfo("FP Module: Added writer for Temperature.", "debug"));

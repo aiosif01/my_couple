@@ -8,7 +8,12 @@
         "FP.C": "cpp",
         "ParticlePoints.C": "cpp",
         "Adapter.C": "cpp",
-        "precicedict": "cpp"
+        "precicedict": "cpp",
+        "ModuleFP.C": "cpp",
+        "ModuleCHT.C": "cpp",
+        "ParticlePosition.C": "cpp",
+        "system_error": "cpp",
+        "FluidTemperature.C": "cpp"
     },
     "cmake.ignoreCMakeListsMissing": true
 }

@@ -1,4 +1,4 @@
-Started on: Fri, 04 Apr 2025 04:21:54 +0300
+Started on: Mon, 07 Apr 2025 15:00:56 +0300
 /*---------------------------------------------------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
@@ -9,10 +9,10 @@ Started on: Fri, 04 Apr 2025 04:21:54 +0300
 Build  : _9bfe8264-20241212 OPENFOAM=2406 patch=241212 version=2406
 Arch   : "LSB;label=32;scalar=64"
 Exec   : blockMesh
-Date   : Apr 04 2025
-Time   : 04:21:54
+Date   : Apr 07 2025
+Time   : 15:00:56
 Host   : ale-ubuntu22
-PID    : 24702
+PID    : 9607
 I/O    : uncollated
 Case   : /home/ale/my_couple/cavity_temp
 nProcs : 1
@@ -86,10 +86,10 @@ End
 Build  : _9bfe8264-20241212 OPENFOAM=2406 patch=241212 version=2406
 Arch   : "LSB;label=32;scalar=64"
 Exec   : topoSet
-Date   : Apr 04 2025
-Time   : 04:21:56
+Date   : Apr 07 2025
+Time   : 15:00:56
 Host   : ale-ubuntu22
-PID    : 24719
+PID    : 9609
 I/O    : uncollated
 Case   : /home/ale/my_couple/cavity_temp
 nProcs : 1
@@ -123,10 +123,10 @@ End
 Build  : _9bfe8264-20241212 OPENFOAM=2406 patch=241212 version=2406
 Arch   : "LSB;label=32;scalar=64"
 Exec   : myPoissonFoam
-Date   : Apr 04 2025
-Time   : 04:21:56
+Date   : Apr 07 2025
+Time   : 15:00:57
 Host   : ale-ubuntu22
-PID    : 24728
+PID    : 9631
 I/O    : uncollated
 Case   : /home/ale/my_couple/cavity_temp
 nProcs : 1
@@ -159,29 +159,28 @@ Adapter::configFileRead() - END
 [PRINT] Adapter::configure() - configFileRead() completed OK
 [PRINT] Adapter::configure() - About to create precice::Participant
 [PRINT] Adapter::configure() - Participant Name = cavity_temp
-[PRINT] Adapter::configure() - Config File = /home/ale/my_couple/precice-config.xml
+[PRINT] Adapter::configure() - Config File = ../precice-config.xml
 [PRINT] Adapter::configure() - Rank = 0, Size = 1
-[stack trace]
-=============
-#1  Foam::sigSegv::sigHandler(int) in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
-#2  ? in /lib/x86_64-linux-gnu/libc.so.6
-#3  ? in /lib/x86_64-linux-gnu/libprecice.so.3
-#4  ? in /lib/x86_64-linux-gnu/libprecice.so.3
-#5  ? in /lib/x86_64-linux-gnu/libprecice.so.3
-#6  ? in /lib/x86_64-linux-gnu/libprecice.so.3
-#7  ? in /lib/x86_64-linux-gnu/libprecice.so.3
-#8  precice::Participant::Participant(precice::span<char const, 18446744073709551615ul>, precice::span<char const, 18446744073709551615ul>, int, int) in /lib/x86_64-linux-gnu/libprecice.so.3
-#9  preciceAdapter::Adapter::configure() in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
-#10  Foam::functionObjects::preciceAdapterFunctionObject::read(Foam::dictionary const&) in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
-#11  Foam::functionObjects::preciceAdapterFunctionObject::preciceAdapterFunctionObject(Foam::word const&, Foam::Time const&, Foam::dictionary const&) in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
-#12  Foam::functionObject::adddictionaryConstructorToTable<Foam::functionObjects::preciceAdapterFunctionObject>::New(Foam::word const&, Foam::Time const&, Foam::dictionary const&) in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/lib/libpreciceAdapterFunctionObject.so
-#13  Foam::functionObject::New(Foam::word const&, Foam::Time const&, Foam::dictionary const&) in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
-#14  Foam::functionObjectList::read() in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
-#15  Foam::Time::run() const in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
-#16  Foam::Time::loop() in /usr/lib/openfoam/openfoam2406/platforms/linux64GccDPInt32Opt/lib/libOpenFOAM.so
-#17  ? in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/bin/myPoissonFoam
-#18  ? in /lib/x86_64-linux-gnu/libc.so.6
-#19  __libc_start_main in /lib/x86_64-linux-gnu/libc.so.6
-#20  ? in ~/OpenFOAM/ale-v2406/platforms/linux64GccDPInt32Opt/bin/myPoissonFoam
-=============
-Segmentation fault (core dumped)
+---[precice] [0m This is preCICE version 3.1.2
+---[precice] [0m Revision info: no-info [git failed to run]
+---[precice] [0m Build type: Release (without debug log)
+---[precice] [0m Configuring preCICE with configuration "../precice-config.xml"
+---[precice] [0m I am participant "cavity_temp"
+[PRINT] Adapter::configure() - Successfully created precice::Participant
+[PRINT] Adapter::configure() - Checking if interfaces need creation (count: 1)
+[PRINT] Adapter::configure() - Starting interface creation 0
+[PRINT] Adapter::configure() - Interface object 0 created for mesh "VolumeMesh"
+[PRINT] Adapter::configure() - Adding writers for interface 0
+[PRINT] Adapter::configure() - Trying to add writer for: "T"
+[PRINT] Added FP writer for "T"
+[PRINT] Adapter::configure() - Successfully added writer for: "T"
+[PRINT] Adapter::configure() - Adding readers for interface 0
+[PRINT] Adapter::configure() - Creating buffer for interface 0
+[PRINT] Adapter::configure() - Buffer created for interface 0
+[PRINT] Adapter::configure() - Finished configuration for interface 0
+[PRINT] Adapter::configure() - Finished interface creation loop
+[PRINT] Adapter::configure() - Calling initialize()
+[PRINT] Adapter::initialize() - START
+[PRINT] Adapter::initialize() - preCICE does not require initial data.
+[PRINT] Adapter::initialize() - Calling precice_->initialize()
+---[precice] [0m Setting up primary communication to coupling partner/s
