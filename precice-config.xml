@@ -38,7 +38,7 @@
   <m2n:sockets acceptor="cavity_temp" connector="cells" exchange-directory=".." />
 
   <coupling-scheme:serial-explicit>
-    <time-window-size value="0.001" />
+    <time-window-size value="0.01" />
     <max-time value="1.0" />
     <participants first="cavity_temp" second="cells" />
     <exchange data="T" mesh="VolumeMesh" from="cavity_temp" to="cells" />
