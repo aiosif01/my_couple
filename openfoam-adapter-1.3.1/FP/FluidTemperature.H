@@ -14,6 +14,15 @@ class FluidTemperature : public CouplingDataUser
 private:
     // Pointer to the OpenFOAM Temperature field
     const Foam::volScalarField* T_;
+    
+    // Store mesh reference for additional debugging
+    const Foam::fvMesh& mesh_;
+    
+    // Store field name for debugging
+    const std::string fieldName_;
+    
+    // Count of values written in last write operation
+    int lastWriteCount_ = 0;
 
 public:
     // Constructor: Takes mesh and the name of the temperature field
@@ -36,10 +45,12 @@ public:
     // Get the data name string ("FluidTemperature")
     std::string getDataName() const override;
 
-    // Initialize (likely not needed)
-    // void initialize() override;
+    // Initialize additional resources if needed
+    void initialize() override;
+    
+    // Helper method to validate mesh and field
+    bool validateField() const;
 };
 } // namespace FP
 } // namespace preciceAdapter
 #endif // FLUIDTEMPERATURE_H
-

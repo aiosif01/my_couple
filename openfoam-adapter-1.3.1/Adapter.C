@@ -214,17 +214,26 @@ bool preciceAdapter::Adapter::configFileRead()
 
         if (FPenabled_)
         {
-            Info << "Adapter::configFileRead() - FP module IS enabled" << endl; // <-- PRINT
-            Info << "Adapter::configFileRead() - About to create FP::FluidParticle" << endl; // <-- PRINT
+            Info << "[PRINT] Adapter::configure() - FP module IS enabled" << endl;
+            Info << "[PRINT] Adapter::configure() - About to create FP::FluidParticle" << endl;
             FP_ = new FP::FluidParticle(mesh_);
-            Info << "Adapter::configFileRead() - Successfully created FP::FluidParticle" << endl; // <-- PRINT
-            Info << "Adapter::configFileRead() - About to call FP_->configure()" << endl; // <-- PRINT
+            Info << "[PRINT] Adapter::configure() - Successfully created FP::FluidParticle" << endl;
+            Info << "[PRINT] Adapter::configure() - About to call FP_->configure()" << endl;
             if (!FP_->configure(preciceDict))
             {
-                 Info << "Adapter::configFileRead() - FP_->configure() returned false" << endl; // <-- PRINT
-                 return false;
+                Info << "[PRINT] Adapter::configure() - FP_->configure() returned false" << endl;
+                return false;
             }
-            Info << "Adapter::configFileRead() - Successfully called FP_->configure()" << endl; // <-- PRINT
+            Info << "[PRINT] Adapter::configure() - Successfully called FP_->configure()" << endl;
+            
+            // Additional debugging - verify temperature field
+            if (FP_->isTemperatureFieldValid()) {
+                Info << "[PRINT] Adapter::configure() - Temperature field '" 
+                    << FP_->getTemperatureFieldName() << "' is valid" << endl;
+            } else {
+                Info << "[PRINT] Adapter::configure() - WARNING: Temperature field '" 
+                    << FP_->getTemperatureFieldName() << "' validation failed" << endl;
+            }
         }
 
         // NOTE: Create your module and read any options specific to it here
@@ -506,24 +515,43 @@ void preciceAdapter::Adapter::readCouplingData(double relativeReadTime)
 
 void preciceAdapter::Adapter::writeCouplingData()
 {
-    Info << "[PRINT] Adapter::writeCouplingData() - START" << endl; // <-- ADDED
+    Info << "[PRINT] Adapter::writeCouplingData() - START" << endl;
     // Only write if preCICE is initialized and interfaces exist
     if (!precice_ || !preciceInitialized_ || interfaces_.empty()) {
-         Info << "[PRINT] Adapter::writeCouplingData() - preCICE not initialized or no interfaces, skipping." << endl; // <-- ADDED
+         Info << "[PRINT] Adapter::writeCouplingData() - preCICE not initialized or no interfaces, skipping." << endl;
          return;
     }
     SETUP_TIMER();
     DEBUG(adapterInfo("Writing coupling data..."));
-
+    
+    // The Interface::writeCouplingData() method doesn't return a value!
+    // Don't try to capture return values
     for (uint i = 0; i < interfaces_.size(); i++)
     {
-         Info << "[PRINT] Adapter::writeCouplingData() - Calling writeCouplingData for interface " << i << endl; // <-- ADDED
-        interfaces_.at(i)->writeCouplingData();
-         Info << "[PRINT] Adapter::writeCouplingData() - Finished writeCouplingData for interface " << i << endl; // <-- ADDED
+         Info << "[PRINT] Adapter::writeCouplingData() - Calling writeCouplingData for interface " << i << endl;
+         
+         // For debugging, check if we're writing temperature in this interface
+         bool writingTemperature = false;
+         for (const auto& dataName : interfacesConfig_.at(i).writeData) {
+             if (dataName == "T") {
+                 writingTemperature = true;
+                 Info << "[PRINT] Adapter::writeCouplingData() - Interface " << i 
+                      << " will write Temperature data" << endl;
+                 break;
+             }
+         }
+         
+         // Call the method - it returns void, don't try to capture a return value
+         interfaces_.at(i)->writeCouplingData();
+         
+         Info << "[PRINT] Adapter::writeCouplingData() - Interface " << i 
+              << " completed writing data" << endl;
     }
 
+    Info << "[PRINT] Adapter::writeCouplingData() - Finished writing data for all interfaces" << endl;
+    
     ACCUMULATE_TIMER(timeInWrite_);
-    Info << "[PRINT] Adapter::writeCouplingData() - END" << endl; // <-- ADDED
+    Info << "[PRINT] Adapter::writeCouplingData() - END" << endl;
     return;
 }
 

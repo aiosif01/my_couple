@@ -79,8 +79,26 @@ preciceAdapter::Interface::Interface(
     configureMesh(mesh, namePointDisplacement, nameCellDisplacement);
 }
 
-void preciceAdapter::Interface::configureMesh(const fvMesh& mesh, const std::string& namePointDisplacement, const std::string& nameCellDisplacement)
+void preciceAdapter::Interface::configureMesh(const Foam::fvMesh& mesh,
+                       const std::string& namePointDisplacement,
+                       const std::string& nameCellDisplacement)
 {
+    adapterInfo("Configuring mesh '" + meshName_ + "' with locationType = " + 
+                (locationType_ == LocationType::faceCenters ? "faceCenters" : 
+                 locationType_ == LocationType::faceNodes ? "faceNodes" : 
+                 locationType_ == LocationType::volumeCenters ? "volumeCenters" : "unknown"), "info");
+    
+    if (patchNames_.size() > 0) {
+        adapterInfo("Mesh uses " + std::to_string(patchNames_.size()) + " patches", "info");
+    }
+    
+    if (cellSetNames_.size() > 0) {
+        adapterInfo("Mesh uses " + std::to_string(cellSetNames_.size()) + " cellSets", "info");
+        for (const auto& cellSetName : cellSetNames_) {
+            adapterInfo("- CellSet: '" + cellSetName + "'", "info");
+        }
+    }
+    
     // The way we configure the mesh differs between meshes based on face centers
     // and meshes based on face nodes.
     // TODO: Reduce code duplication. In the meantime, take care to update

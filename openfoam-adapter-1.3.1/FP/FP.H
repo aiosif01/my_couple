@@ -15,17 +15,32 @@ class FluidParticle
 {
 private:
     const Foam::fvMesh& mesh_;
-    // Add any FP-specific config members here if needed
+    
+    // Configuration parameters
     std::string nameT_ = "T"; // Default name for Temperature field
+    
+    // Status tracking for better debugging
+    bool isConfigured_ = false;
+    bool tempFieldExists_ = false;
 
 public:
     FluidParticle(const Foam::fvMesh& mesh);
     ~FluidParticle();
+    
+    // Configuration method with enhanced validation
     bool configure(const Foam::dictionary& dict);
+    
+    // Writer/reader setup with additional validation
     bool addWriters(std::string dataName, Interface* interface);
     bool addReaders(std::string dataName, Interface* interface);
+    
+    // Validation helpers
+    bool validateTemperatureField() const;
+    
+    // Getters for diagnostics
+    const std::string& getTemperatureFieldName() const { return nameT_; }
+    bool isTemperatureFieldValid() const { return tempFieldExists_; }
 };
 } // namespace FP
 } // namespace preciceAdapter
 #endif // FP_H
-

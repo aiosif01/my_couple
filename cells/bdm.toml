@@ -4,4 +4,4 @@ interval = 1
 
 [[visualize_agent]]
   name = "MyCell"
-  additional_data_members = ["cell_color_"]
+  additional_data_members = ["cell_color_", "temperature_"]

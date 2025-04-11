@@ -10,46 +10,11 @@ FoamFile
     version     2.0;
     format      ascii;
     class       dictionary;
-    object      controlDict;
+    object      fvOptions;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-application     myPoissonFoam;
+// This is needed for volume coupling to maintain the values provided by preCICE
+// The temperature in the coupled region (box1) should be maintained and not overwritten
 
-startFrom       startTime;
-
-startTime       0;
-
-stopAt          endTime;
-
-endTime         1;
-
-deltaT          0.01;
-
-writeControl    timeStep;
-
-writeInterval   50;
-
-purgeWrite      0;
-
-writeFormat     ascii;
-
-writePrecision  6;
-
-writeCompression off;
-
-timeFormat      general;
-
-timePrecision   6;
-
-runTimeModifiable false;
-
-functions
-{
-    preCICE_Adapter
-    {
-        type preciceAdapterFunctionObject;
-        libs ("libpreciceAdapterFunctionObject.so");
-    }
-}
-// ************************************************************************* //
+// No need to define explicit code now as the adapter handles coupling

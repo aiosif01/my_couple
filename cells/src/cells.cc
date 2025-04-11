@@ -13,4 +13,8 @@
 // -----------------------------------------------------------------------------
 #include "cells.h"
 
-int main(int argc, const char** argv) { return bdm::Simulate(argc, argv); }
+// Use the namespace bdm to access the Simulate function defined in cells.h
+int main(int argc, const char** argv) { 
+  // Call the Simulate function defined in cells.h
+  return bdm::Simulate(argc, argv); 
+}
