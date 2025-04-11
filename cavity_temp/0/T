@@ -28,26 +28,26 @@ boundaryField
 
     rightWall 
     {
-        type            fixedValue;
-        value           uniform 300;
+        type            zeroGradient;
+        // value           uniform 300;
     }
 
     bottomWall  
     {
-        type            fixedValue;
-        value           uniform 300;
+        type            zeroGradient;
+        // value           uniform 300;
     }
 
     topWall  
     {
-        type            fixedValue;
-        value           uniform 300;
+        type            zeroGradient;
+        // value           uniform 300;
     }
 
     frontAndBack
     {
-        type            fixedValue;
-        value           uniform 300;
+        type            zeroGradient;
+        // value           uniform 300;
     }
 
     // defaultFaces
