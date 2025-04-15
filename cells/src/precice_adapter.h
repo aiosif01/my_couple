@@ -5,6 +5,8 @@
 #include "precice/precice.hpp" 
 #include <vector>
 #include <string>
+#include <tuple>
+#include <algorithm>
 
 #include "my_cell.h" 
 
@@ -17,6 +19,15 @@ class PreciceAdapter {
         mesh_name_("CellMesh"),
         temperature_data_name_("T") {
     Log::Info("PreciceAdapter", "Adapter created for participant: ", participant_name);
+    Log::Info("PreciceAdapter", "Using mesh name: ", mesh_name_);
+    Log::Info("PreciceAdapter", "Using data name: ", temperature_data_name_);
+  }
+
+  // Add this method to safely check before initialization
+  bool WillRequireInitialData() {
+    // Cannot call interface_.requiresInitialData() before initialization
+    // Conservatively return true to be safe
+    return true;
   }
 
   void Initialize() {
@@ -38,55 +49,65 @@ class PreciceAdapter {
     
     // Continue with mesh setup
     Log::Info("PreciceAdapter", "UpdateMesh: Setting up mesh vertices...");
+    Log::Info("PreciceAdapter", "Using RIGHT-HANDED XYZ coordinate system");
+    Log::Info("PreciceAdapter", "Domain extents: (0,0,0) to (1,1,1)");
+    
     auto* rm = simulation.GetResourceManager();
     positions_.clear();
     vertex_ids_.clear();
+    cell_agent_map_.clear();
 
-    // Count MyCell agents for logging
-    int cellCount = 0;
+    // First, collect all MyCell agents and their positions
+    std::vector<std::tuple<double, double, double, MyCell*>> sorted_cells;
+    
     rm->ForEachAgent([&](Agent* agent) {
-      if (dynamic_cast<MyCell*>(agent)) {
-        cellCount++;
+      if (auto* my_cell = dynamic_cast<MyCell*>(agent)) {
+        const auto& pos = my_cell->GetPosition();
+        sorted_cells.emplace_back(pos[0], pos[1], pos[2], my_cell);
       }
     });
     
-    Log::Info("PreciceAdapter", "UpdateMesh: Found ", cellCount, " MyCell agents");
+    // Sort cells by position for consistent ordering (first X, then Y, then Z)
+    std::sort(sorted_cells.begin(), sorted_cells.end());
+    
+    Log::Info("PreciceAdapter", "UpdateMesh: Collected ", sorted_cells.size(), " MyCell agents");
 
     // Store information about OpenFOAM mesh structure (from blockMeshDict)
     const int openfoam_cells_per_dim = 50; // 50x50x50 cells from blockMeshDict
     const double domain_size = 1.0;
     const double openfoam_cell_size = domain_size / openfoam_cells_per_dim;
     
-    // Collect positions of all MyCell agents and map to OpenFOAM cells
-    int cells_mapped = 0;
-    rm->ForEachAgent([&](Agent* agent) {
-      if (auto* my_cell = dynamic_cast<MyCell*>(agent)) {
-        const auto& pos = my_cell->GetPosition();
-        
-        // Store x, y, z coordinates for each cell
-        positions_.push_back(pos[0]);
-        positions_.push_back(pos[1]);
-        positions_.push_back(pos[2]);
-        
-        // Calculate which OpenFOAM cell this BioDynaMo cell maps to
-        int of_cell_x = static_cast<int>(pos[0] / openfoam_cell_size);
-        int of_cell_y = static_cast<int>(pos[1] / openfoam_cell_size);
-        int of_cell_z = static_cast<int>(pos[2] / openfoam_cell_size);
-        
-        // Clamp to valid range
-        of_cell_x = std::max(0, std::min(of_cell_x, openfoam_cells_per_dim - 1));
-        of_cell_y = std::max(0, std::min(of_cell_y, openfoam_cells_per_dim - 1));
-        of_cell_z = std::max(0, std::min(of_cell_z, openfoam_cells_per_dim - 1));
-        
-        if (cells_mapped < 10 || cellCount - cells_mapped < 10) {
-          // Log first and last 10 cells for debugging
-          Log::Info("PreciceAdapter", "UpdateMesh: Added cell at position (", 
-                   pos[0], ", ", pos[1], ", ", pos[2], ") -> OpenFOAM cell [", 
-                   of_cell_x, ", ", of_cell_y, ", ", of_cell_z, "]");
-        }
-        cells_mapped++;
-      }
-    });
+    Log::Info("PreciceAdapter", "OpenFOAM mesh: ", openfoam_cells_per_dim, "×", 
+              openfoam_cells_per_dim, "×", openfoam_cells_per_dim, 
+              " cells (cell size: ", openfoam_cell_size, ")");
+    
+    // Reserve space for positions array (3 coordinates per cell)
+    positions_.reserve(sorted_cells.size() * 3);
+    
+    // Add each cell's position to the positions array and map to OF cell
+    for (const auto& [x, y, z, cell] : sorted_cells) {
+      // Store x, y, z coordinates for each cell
+      positions_.push_back(x);
+      positions_.push_back(y);
+      positions_.push_back(z);
+      
+      // Calculate which OpenFOAM cell this BioDynaMo cell maps to
+      int of_cell_x = static_cast<int>(x / openfoam_cell_size);
+      int of_cell_y = static_cast<int>(y / openfoam_cell_size);
+      int of_cell_z = static_cast<int>(z / openfoam_cell_size);
+      
+      // Clamp to valid range
+      of_cell_x = std::max(0, std::min(of_cell_x, openfoam_cells_per_dim - 1));
+      of_cell_y = std::max(0, std::min(of_cell_y, openfoam_cells_per_dim - 1));
+      of_cell_z = std::max(0, std::min(of_cell_z, openfoam_cells_per_dim - 1));
+      
+      // Calculate linear index for this OpenFOAM cell
+      int of_cell_index = of_cell_x + of_cell_y * openfoam_cells_per_dim + 
+                         of_cell_z * openfoam_cells_per_dim * openfoam_cells_per_dim;
+      
+      // Store mapping from agent to OF cell 
+      cell_agent_map_.push_back({cell->GetUid(), of_cell_index});
+    }
 
     // Calculate number of vertices from positions array (3 coords per vertex)
     size_t num_vertices = positions_.size() / 3;
@@ -108,6 +129,14 @@ class PreciceAdapter {
         precice::span<int>(vertex_ids_.data(), vertex_ids_.size()));
     
     Log::Info("PreciceAdapter", "UpdateMesh: Successfully registered ", num_vertices, " vertices with preCICE");
+    
+    // Print the first few vertex IDs and positions for debugging
+    int debug_count = std::min(static_cast<size_t>(10), num_vertices);
+    for (int i = 0; i < debug_count; i++) {
+      Log::Info("PreciceAdapter", "Vertex ", i, " (ID: ", vertex_ids_[i], 
+                ") at position (", positions_[i*3], ", ", positions_[i*3+1], 
+                ", ", positions_[i*3+2], ") maps to OF cell ", cell_agent_map_[i].second);
+    }
     
     // Mark that mesh has been set
     meshAlreadySet = true;
@@ -171,7 +200,16 @@ class PreciceAdapter {
      }
   }
 
-  // --- NO CHANGES BELOW THIS LINE ---
+  // Return the BDM agent to OpenFOAM cell index mapping
+  const std::vector<std::pair<AgentUid, int>>& GetCellAgentMap() const {
+    return cell_agent_map_;
+  }
+
+  // This method should only be called AFTER initialize() has been called
+  bool RequiresInitialData() {
+    return interface_.requiresInitialData();
+  }
+  
   void Advance(double dt) {
     interface_.advance(dt);
   }
@@ -202,6 +240,7 @@ class PreciceAdapter {
   std::string temperature_data_name_;
   std::vector<double> positions_;
   std::vector<int> vertex_ids_;
+  std::vector<std::pair<AgentUid, int>> cell_agent_map_; // Maps BDM agent UIDs to OpenFOAM cell indices
 };
 
 } // namespace bdm

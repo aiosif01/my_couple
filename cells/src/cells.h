@@ -3,7 +3,9 @@
 
 #include "biodynamo.h"
 #include "precice_adapter.h"
-#include "my_cell.h" // Make sure this is included
+#include "my_cell.h"
+#include <algorithm>
+#include <map>
 
 namespace bdm {
 
@@ -32,47 +34,47 @@ inline int Simulate(int argc, const char** argv) {
             "×", openfoam_cells_per_dim, " cells (cell size: ", openfoam_cell_size, ")");
   
   // BioDynaMo agent parameters
-  const int agents_per_dim = 10; // 10×10×10 = 1000 agents
-  double cell_diameter = 0.01; // Cell diameter (smaller than OpenFOAM cell size)
+  // We'll create agents exactly at OpenFOAM cell centers for better mapping
+  const int spacing = 5; // Use every 5th OpenFOAM cell
+  double cell_diameter = openfoam_cell_size * 0.5; // Cell diameter smaller than OF cell size
   
   // We'll still define an initial temperature as a fallback value
   // But we'll read it from OpenFOAM when possible
   double initial_temp = 300.0; // Default initial temperature if preCICE fails
   
-  // Calculate step size to evenly distribute BioDynaMo agents across the domain
-  int step = openfoam_cells_per_dim / agents_per_dim; // Step = 5 for 10 agents per dimension
-  
-  Log::Info("Simulate", "Creating BioDynaMo agents in a ", agents_per_dim, "×", 
-            agents_per_dim, "×", agents_per_dim, " grid (", 
-            agents_per_dim*agents_per_dim*agents_per_dim, " total agents)");
+  Log::Info("Simulate", "Creating BioDynaMo agents at OpenFOAM cell centers");
   
   int cell_count = 0;
+  std::map<int, MyCell*> of_cell_to_agent_map; // Maps OF cell indices to BDM agents
   
   // Create BioDynaMo agents at the centers of selected OpenFOAM cells
-  for (int i = 0; i < agents_per_dim; i++) {
-    for (int j = 0; j < agents_per_dim; j++) {
-      for (int k = 0; k < agents_per_dim; k++) {
-        // Calculate OpenFOAM cell indices (evenly distributed)
-        int of_cell_i = i * step + step/2; // Add half step to get to middle cells
-        int of_cell_j = j * step + step/2;
-        int of_cell_k = k * step + step/2;
-        
+  for (int i = 0; i < openfoam_cells_per_dim; i += spacing) {
+    for (int j = 0; j < openfoam_cells_per_dim; j += spacing) {
+      for (int k = 0; k < openfoam_cells_per_dim; k += spacing) {
         // Calculate the exact center position of this OpenFOAM cell
-        double pos_x = (of_cell_i + 0.5) * openfoam_cell_size;
-        double pos_y = (of_cell_j + 0.5) * openfoam_cell_size;
-        double pos_z = (of_cell_k + 0.5) * openfoam_cell_size;
+        double pos_x = (i + 0.5) * openfoam_cell_size;
+        double pos_y = (j + 0.5) * openfoam_cell_size;
+        double pos_z = (k + 0.5) * openfoam_cell_size;
         
         // Create a BioDynaMo agent (cell) at the exact center of this OpenFOAM cell
         MyCell* cell = new MyCell({pos_x, pos_y, pos_z});
         cell->SetDiameter(cell_diameter);
         cell->SetTemperature(initial_temp); // Initially set to default value, will be updated with OpenFOAM data
+        
+        // Calculate the linear index of this OpenFOAM cell
+        int of_cell_index = i + j * openfoam_cells_per_dim + k * openfoam_cells_per_dim * openfoam_cells_per_dim;
+        
+        // Store in our mapping
+        of_cell_to_agent_map[of_cell_index] = cell;
+        
+        // Add the agent to the simulation
         rm->AddAgent(cell);
         
         // Log cell creation (limit output)
-        if (cell_count % 100 == 0 || cell_count < 5 || cell_count > 995) {
+        if (cell_count < 5 || cell_count % 100 == 0) {
           Log::Info("Simulate", "Created agent ", cell_count, 
                    " at position (", pos_x, ", ", pos_y, ", ", pos_z, ")",
-                   " - center of OpenFOAM cell [", of_cell_i, ", ", of_cell_j, ", ", of_cell_k, "]");
+                   " - OpenFOAM cell index: ", of_cell_index);
         }
         
         cell_count++;
@@ -81,6 +83,26 @@ inline int Simulate(int argc, const char** argv) {
   }
   
   Log::Info("Simulate", "Created ", cell_count, " agents at centers of OpenFOAM volume cells");
+  
+  // Add special test cells at cardinal directions for debugging
+  Log::Info("Simulate", "------ Adding Cardinal Direction Test Cells ------");
+  const std::vector<std::pair<std::string, Real3>> testPoints = {
+    {"Origin", {0.1, 0.1, 0.1}},
+    {"X-axis", {0.9, 0.1, 0.1}},
+    {"Y-axis", {0.1, 0.9, 0.1}},
+    {"Z-axis", {0.1, 0.1, 0.9}},
+    {"Center", {0.5, 0.5, 0.5}}
+  };
+
+  for (const auto& [name, pos] : testPoints) {
+    MyCell* cell = new MyCell(pos);
+    cell->SetDiameter(cell_diameter);
+    cell->SetTemperature(350.0); // Higher temperature to distinguish them
+    rm->AddAgent(cell);
+    
+    Log::Info("Simulate", "Added test cell '", name, "' at position (", 
+              pos[0], ",", pos[1], ",", pos[2], ")");
+  }
   
   // Verify cells were created
   uint64_t total_cells = rm->GetNumAgents();
@@ -101,14 +123,13 @@ inline int Simulate(int argc, const char** argv) {
         cells_in_domain++;
       } else {
         cells_outside_domain++;
-        Log::Warning("Simulate", "DEBUG: After creation, cell ID ", cell->GetUid(), 
-                    " position (", pos[0], ",", pos[1], ",", pos[2], 
+        Log::Warning("Simulate", "Cell at position (", pos[0], ",", pos[1], ",", pos[2], 
                     ") is OUTSIDE OpenFOAM domain bounds!");
       }
     }
   });
   
-  Log::Info("Simulate", "DEBUG: Cell position verification - ", cells_in_domain, 
+  Log::Info("Simulate", "Cell position verification - ", cells_in_domain, 
            " cells INSIDE domain, ", cells_outside_domain, " cells OUTSIDE domain");
   
   if (total_cells == 0) {
@@ -129,68 +150,110 @@ inline int Simulate(int argc, const char** argv) {
   
   // 3. Initialize preCICE AFTER mesh registration is complete
   Log::Info("Simulate", "Initializing preCICE connection...");
+  // Check if we'll need to write initial data (safe to call before initialization)
+  bool will_need_initial_data = adapter.WillRequireInitialData();
+  Log::Info("Simulate", "preCICE adapter ", (will_need_initial_data ? "will" : "will not"), " require initial data");
+
+  // Initialize preCICE
   adapter.Initialize();
-  
+
+  // *** REMOVE THIS CODE BLOCK THAT'S CAUSING THE ERROR ***
+  // if (adapter.RequiresInitialData()) {
+  //   Log::Info("Simulate", "Writing initial data to satisfy preCICE requirements...");
+  //   // This is a placeholder - implement WriteData method if needed
+  //   // adapter.WriteData();
+  // }
+
   // --- EXPLICIT AGENT TEMPERATURE INITIALIZATION FROM OPENFOAM ---
-  Log::Info("Simulate", "Initializing agent temperatures from OpenFOAM data...");
+  Log::Info("Simulate", "Reading initial temperature data from OpenFOAM...");
   std::vector<double> initial_temperatures;
   adapter.ReadTemperature(initial_temperatures);
+
+  // Log temperature data status
+  if (!initial_temperatures.empty()) {
+    Log::Info("Simulate", "Successfully received ", initial_temperatures.size(), 
+              " initial temperature values from OpenFOAM (range: ", 
+              *std::min_element(initial_temperatures.begin(), initial_temperatures.end()), " to ",
+              *std::max_element(initial_temperatures.begin(), initial_temperatures.end()), ")");
+  } else {
+    Log::Warning("Simulate", "No initial temperature data received from OpenFOAM!");
+  }
   
   if (!initial_temperatures.empty()) {
-    std::cout << "INITIALIZATION: Successfully received " << initial_temperatures.size() 
-              << " initial temperature values from OpenFOAM" << std::endl;
+    Log::Info("Simulate", "Successfully received ", initial_temperatures.size(), 
+              " initial temperature values from OpenFOAM");
     
-    // Apply initial temperature values to cells
-    size_t idx = 0;
-    double min_init_temp = std::numeric_limits<double>::max();
-    double max_init_temp = std::numeric_limits<double>::lowest();
-    double sum_init_temp = 0.0;
-    int cells_initialized = 0;
+    // Apply initial temperature values to cells - using agent UID to OpenFOAM cell mapping
+    const auto& cell_agent_map = adapter.GetCellAgentMap();
     
-    rm->ForEachAgent([&](Agent* agent) {
-      if (auto* cell = dynamic_cast<MyCell*>(agent)) {
-        if (idx < initial_temperatures.size()) {
-          double temp = initial_temperatures[idx];
-          double default_temp = cell->GetTemperature();
-          cell->SetTemperature(temp);
-          
-          // Log the first few cells for verification
-          if (idx < 5 || idx > initial_temperatures.size() - 5) {
-            const auto& pos = cell->GetPosition();
-            std::cout << "INITIALIZATION: Cell at (" << pos[0] << ", " << pos[1] << ", " << pos[2]
-                     << ") initialized with temperature " << temp 
-                     << " (was default: " << default_temp << ")" << std::endl;
-          }
-          
-          // Track temperature stats
-          min_init_temp = std::min(min_init_temp, temp);
-          max_init_temp = std::max(max_init_temp, temp);
-          sum_init_temp += temp;
-          cells_initialized++;
-          
-          idx++;
-        } else {
-          if (idx == initial_temperatures.size()) { // Print only once to avoid log spam
-            std::cout << "INITIALIZATION: More cells than temperature values available" << std::endl;
-          }
-          idx++;
-        }
+    if (!cell_agent_map.empty()) {
+      Log::Info("Simulate", "Using cell-agent mapping with ", cell_agent_map.size(), " entries");
+      
+      // Create map from AgentUid to temperature
+      std::map<AgentUid, double> agent_temperatures;
+      
+      for (size_t i = 0; i < cell_agent_map.size() && i < initial_temperatures.size(); i++) {
+        agent_temperatures[cell_agent_map[i].first] = initial_temperatures[i];
       }
-    });
-    
-    // Log initialization statistics
-    if (cells_initialized > 0) {
-      double avg_temp = sum_init_temp / cells_initialized;
-      std::cout << "INITIALIZATION: Successfully initialized " << cells_initialized 
-                << " agent temperatures from OpenFOAM data" << std::endl;
-      std::cout << "INITIALIZATION: Temperature stats - Min: " << min_init_temp 
-                << ", Max: " << max_init_temp << ", Avg: " << avg_temp << std::endl;
+      
+      // Track temperature stats
+      double min_init_temp = std::numeric_limits<double>::max();
+      double max_init_temp = std::numeric_limits<double>::lowest();
+      double sum_init_temp = 0.0;
+      int cells_initialized = 0;
+      
+      // Apply temperatures to agents
+      rm->ForEachAgent([&](Agent* agent) {
+        if (auto* cell = dynamic_cast<MyCell*>(agent)) {
+          auto agent_uid = cell->GetUid();
+          
+          // Check if this agent has a temperature mapping
+          auto it = agent_temperatures.find(agent_uid);
+          if (it != agent_temperatures.end()) {
+            double temp = it->second;
+            cell->SetTemperature(temp);
+            
+            // Track temperature stats
+            min_init_temp = std::min(min_init_temp, temp);
+            max_init_temp = std::max(max_init_temp, temp);
+            sum_init_temp += temp;
+            cells_initialized++;
+            
+            // Set color based on temperature (blue to red)
+            double norm_temp = (temp - 300.0) / 150.0; // Normalize to 0-1 range
+            Double3 color = {
+              std::min(1.0, std::max(0.0, norm_temp)),     // Red
+              0.0,                                         // Green
+              std::min(1.0, std::max(0.0, 1.0 - norm_temp)) // Blue
+            };
+            cell->SetCellColor(color);
+            
+            // Log a few examples
+            if (cells_initialized < 5 || cells_initialized % 200 == 0) {
+              const auto& pos = cell->GetPosition();
+              Log::Info("Simulate", "Cell at (", pos[0], ",", pos[1], ",", pos[2],
+                      ") initialized with temperature ", temp);
+            }
+          }
+        }
+      });
+      
+      // Log initialization statistics
+      if (cells_initialized > 0) {
+        double avg_temp = sum_init_temp / cells_initialized;
+        Log::Info("Simulate", "Successfully initialized ", cells_initialized, 
+                  " agent temperatures from OpenFOAM data");
+        Log::Info("Simulate", "Temperature stats - Min: ", min_init_temp, 
+                  ", Max: ", max_init_temp, ", Avg: ", avg_temp);
+      } else {
+        Log::Warning("Simulate", "No cells were initialized with temperature data");
+      }
     } else {
-      std::cout << "INITIALIZATION: WARNING - No cells were initialized with temperature data" << std::endl;
+      Log::Warning("Simulate", "Cell-agent mapping is empty!");
     }
   } else {
-    std::cout << "INITIALIZATION: Failed to receive initial temperature data from OpenFOAM. "
-              << "Using default temperature value (" << initial_temp << ")" << std::endl;
+    Log::Warning("Simulate", "Failed to receive initial temperature data from OpenFOAM. ",
+                "Using default temperature value (", initial_temp, ")");
   }
   
   // --- Run simulation ---
@@ -208,57 +271,106 @@ inline int Simulate(int argc, const char** argv) {
     
     // Use direct console output to ensure visibility regardless of log level
     if (!temperatures.empty()) {
-      std::cout << "MAIN LOOP: Successfully received " << temperatures.size() << " temperature values in timestep " << timestep << std::endl;
+      std::cout << "TIMESTEP " << timestep << ": Received " << temperatures.size() 
+                << " temperature values" << std::endl;
       
-      // Apply temperature values to cells
-      size_t idx = 0;
-      double min_applied_temp = std::numeric_limits<double>::max();
-      double max_applied_temp = std::numeric_limits<double>::lowest();
-      double sum_applied_temp = 0.0;
-      int cells_updated = 0;
+      // Track temperature ranges
+      double min_temp = std::numeric_limits<double>::max();
+      double max_temp = std::numeric_limits<double>::lowest();
       
-      rm->ForEachAgent([&](Agent* agent) {
-        if (auto* cell = dynamic_cast<MyCell*>(agent)) {
-          if (idx < temperatures.size()) {
-            double temp = temperatures[idx];
-            double old_temp = cell->GetTemperature();
-            cell->SetTemperature(temp);
-            
-            // Only print the first cell's temperature for each timestep to avoid excessive output
-            if (idx == 0) {
-              const auto& pos = cell->GetPosition();
-              std::cout << "MAIN LOOP: First cell at (" << pos[0] << ", " << pos[1] << ", " << pos[2]
-                       << ") temperature changed from " << old_temp << " to " << temp
-                       << " (delta: " << temp - old_temp << ")" << std::endl;
-            }
-            
-            // Track temperature stats
-            min_applied_temp = std::min(min_applied_temp, temp);
-            max_applied_temp = std::max(max_applied_temp, temp);
-            sum_applied_temp += temp;
-            cells_updated++;
-            
-            idx++;
-          } else {
-            if (idx == temperatures.size()) { // Only print once to avoid excessive output
-              std::cout << "MAIN LOOP: More cells than temperature values available" << std::endl;
-            }
-            idx++;
-          }
+      for (size_t i = 0; i < temperatures.size(); i++) {
+        min_temp = std::min(min_temp, temperatures[i]);
+        max_temp = std::max(max_temp, temperatures[i]);
+      }
+      
+      std::cout << "TIMESTEP " << timestep << ": Temperature range [" 
+                << min_temp << ", " << max_temp << "]" << std::endl;
+      
+      // Check if values are changing between timesteps
+      static double prev_max_temp = 0;
+      static double prev_min_temp = 0;
+      
+      if (timestep > 1) {
+        std::cout << "TIMESTEP " << timestep << ": Temperature change: Min delta = " 
+                  << (min_temp - prev_min_temp) << ", Max delta = "
+                  << (max_temp - prev_max_temp) << std::endl;
+      }
+      
+      prev_min_temp = min_temp;
+      prev_max_temp = max_temp;
+      
+      // Apply temperature values to cells - using agent UID to OpenFOAM cell mapping
+      const auto& cell_agent_map = adapter.GetCellAgentMap();
+      
+      if (!cell_agent_map.empty()) {
+        // Create map from AgentUid to temperature
+        std::map<AgentUid, double> agent_temperatures;
+        
+        for (size_t i = 0; i < cell_agent_map.size() && i < temperatures.size(); i++) {
+          agent_temperatures[cell_agent_map[i].first] = temperatures[i];
         }
-      });
-      
-      // Log temperature application statistics with direct console output
-      if (cells_updated > 0) {
-        double avg_temp = sum_applied_temp / cells_updated;
-        std::cout << "MAIN LOOP: Temperature stats for timestep " << timestep
-                 << " - Min: " << min_applied_temp << ", Max: " << max_applied_temp
-                 << ", Avg: " << avg_temp << ", Cells updated: " << cells_updated << std::endl;
+        
+        // Track temperature stats for agents
+        double min_applied_temp = std::numeric_limits<double>::max();
+        double max_applied_temp = std::numeric_limits<double>::lowest();
+        double sum_applied_temp = 0.0;
+        int cells_updated = 0;
+        
+        // Apply temperatures to agents
+        rm->ForEachAgent([&](Agent* agent) {
+          if (auto* cell = dynamic_cast<MyCell*>(agent)) {
+            auto agent_uid = cell->GetUid();
+            
+            // Check if this agent has a temperature mapping
+            auto it = agent_temperatures.find(agent_uid);
+            if (it != agent_temperatures.end()) {
+              double temp = it->second;
+              double old_temp = cell->GetTemperature();
+              cell->SetTemperature(temp);
+              
+              // Track temperature stats
+              min_applied_temp = std::min(min_applied_temp, temp);
+              max_applied_temp = std::max(max_applied_temp, temp);
+              sum_applied_temp += temp;
+              cells_updated++;
+              
+              // Set color based on temperature (blue to red)
+              double norm_temp = (temp - 300.0) / 150.0; // Normalize to 0-1 range
+              Double3 color = {
+                std::min(1.0, std::max(0.0, norm_temp)),     // Red
+                0.0,                                         // Green
+                std::min(1.0, std::max(0.0, 1.0 - norm_temp)) // Blue
+              };
+              cell->SetCellColor(color);
+              
+              // Only log a small sample of cells
+              if (cells_updated == 1 || cells_updated % 200 == 0) {
+                const auto& pos = cell->GetPosition();
+                std::cout << "TIMESTEP " << timestep << ": Cell at (" 
+                          << pos[0] << ", " << pos[1] << ", " << pos[2]
+                          << ") temperature changed from " << old_temp 
+                          << " to " << temp << " (delta: " 
+                          << temp - old_temp << ")" << std::endl;
+              }
+            }
+          }
+        });
+        
+        // Log temperature application statistics
+        if (cells_updated > 0) {
+          double avg_temp = sum_applied_temp / cells_updated;
+          std::cout << "TIMESTEP " << timestep << ": Temperature stats - Min: " 
+                    << min_applied_temp << ", Max: " << max_applied_temp
+                    << ", Avg: " << avg_temp << ", Cells updated: " 
+                    << cells_updated << std::endl;
+        } else {
+          std::cout << "TIMESTEP " << timestep << ": WARNING - No cells were updated with temperature data" << std::endl;
+        }
       } else {
-        std::cout << "MAIN LOOP: WARNING - No cells were updated with temperature data in timestep " << timestep << std::endl;
+        std::cout << "TIMESTEP " << timestep << ": WARNING - Cell-agent mapping is empty!" << std::endl;
       }
     } else {
-      std::cout << "MAIN LOOP: No temperature data received in timestep " << timestep << std::endl;
+      std::cout << "TIMESTEP " << timestep << ": No temperature data received" << std::endl;
     }
     
     // Run one simulation step

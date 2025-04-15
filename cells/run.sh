@@ -10,5 +10,6 @@ source /home/ale/biodynamo-v1.05.124/bin/thisbdm.sh
 set -u
 
 bdm run
+bdm view
 
 close_log
