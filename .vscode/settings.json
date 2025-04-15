@@ -15,5 +15,6 @@
         "system_error": "cpp",
         "FluidTemperature.C": "cpp"
     },
-    "cmake.ignoreCMakeListsMissing": true
+    "cmake.ignoreCMakeListsMissing": true,
+    "git.ignoreLimitWarning": true
 }

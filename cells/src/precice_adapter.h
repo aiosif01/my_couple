@@ -2,11 +2,11 @@
 #define PRECICE_ADAPTER_H_
 
 #include "biodynamo.h"
-#include "precice/precice.hpp" // Includes span definition
+#include "precice/precice.hpp" 
 #include <vector>
 #include <string>
 
-#include "my_cell.h" // Include the full definition of MyCell
+#include "my_cell.h" 
 
 namespace bdm {
 
@@ -52,17 +52,39 @@ class PreciceAdapter {
     
     Log::Info("PreciceAdapter", "UpdateMesh: Found ", cellCount, " MyCell agents");
 
-    // Collect positions of all MyCell agents
+    // Store information about OpenFOAM mesh structure (from blockMeshDict)
+    const int openfoam_cells_per_dim = 50; // 50x50x50 cells from blockMeshDict
+    const double domain_size = 1.0;
+    const double openfoam_cell_size = domain_size / openfoam_cells_per_dim;
+    
+    // Collect positions of all MyCell agents and map to OpenFOAM cells
+    int cells_mapped = 0;
     rm->ForEachAgent([&](Agent* agent) {
       if (auto* my_cell = dynamic_cast<MyCell*>(agent)) {
         const auto& pos = my_cell->GetPosition();
+        
         // Store x, y, z coordinates for each cell
         positions_.push_back(pos[0]);
         positions_.push_back(pos[1]);
         positions_.push_back(pos[2]);
         
-        Log::Info("PreciceAdapter", "UpdateMesh: Added cell at position (", 
-                 pos[0], ", ", pos[1], ", ", pos[2], ")");
+        // Calculate which OpenFOAM cell this BioDynaMo cell maps to
+        int of_cell_x = static_cast<int>(pos[0] / openfoam_cell_size);
+        int of_cell_y = static_cast<int>(pos[1] / openfoam_cell_size);
+        int of_cell_z = static_cast<int>(pos[2] / openfoam_cell_size);
+        
+        // Clamp to valid range
+        of_cell_x = std::max(0, std::min(of_cell_x, openfoam_cells_per_dim - 1));
+        of_cell_y = std::max(0, std::min(of_cell_y, openfoam_cells_per_dim - 1));
+        of_cell_z = std::max(0, std::min(of_cell_z, openfoam_cells_per_dim - 1));
+        
+        if (cells_mapped < 10 || cellCount - cells_mapped < 10) {
+          // Log first and last 10 cells for debugging
+          Log::Info("PreciceAdapter", "UpdateMesh: Added cell at position (", 
+                   pos[0], ", ", pos[1], ", ", pos[2], ") -> OpenFOAM cell [", 
+                   of_cell_x, ", ", of_cell_y, ", ", of_cell_z, "]");
+        }
+        cells_mapped++;
       }
     });
 

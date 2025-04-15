@@ -261,56 +261,30 @@ std::size_t FluidTemperature::write(double* dataBuffer, bool meshConnectivity, c
             if (patchID < 0 || patchID >= T_->boundaryField().size()) {
                 Info << "FP DEBUG: WARNING - Invalid patchID " << 
                     patchID << ". Skipping." << endl;
-                adapterInfo("FluidTemperature::write - WARNING: Invalid patchID " + 
-                           std::to_string(patchID) + ". Skipping.", "warning");
                 continue;
             }
             
-            // Get reference to the boundary field for this patch
-            const fvPatchScalarField& patchField = T_->boundaryField()[patchID];
+            // Access patch field
+            const scalarField& TPatch = T_->boundaryField()[patchID];
             
-            Info << "FP DEBUG: Processing patch " << patchID << 
-                " with " << patchField.size() << " faces" << endl;
+            Info << "FP DEBUG: Processing patch ID " << patchID << 
+                " with " << TPatch.size() << " values" << endl;
             
-            // Use indexed loop for boundary field
-            for (label faceI = 0; faceI < patchField.size(); ++faceI)
+            // Copy values to buffer
+            forAll(TPatch, i)
             {
-                dataBuffer[bufferIndex++] = patchField[faceI];
+                dataBuffer[bufferIndex++] = TPatch[i];
                 valuesWritten++;
             }
         }
     }
-
-    // Display buffer contents for debugging
-    if (valuesWritten > 0) {
-        Info << "FP DEBUG: Buffer inspection - first values: ";
-        int numToPrint = std::min(10, valuesWritten);
-        for (int i = 0; i < numToPrint; i++) {
-            Info << dataBuffer[i] << " ";
-        }
-        Info << endl;
-    } else {
-        Info << "FP DEBUG: WARNING - No values were written to buffer!" << endl;
-    }
-
-    Info << "FP DEBUG: FluidTemperature::write finished, wrote " << valuesWritten << 
-         " temperature values to buffer at position [0:" << (bufferIndex-1) << "]" << endl;
     
-    // EMERGENCY OVERRIDE - FORCE SOME VALUES FOR TESTING
-    // Uncomment this block to force some test values if nothing is being written
-    /*
-    if (valuesWritten == 0) {
-        Info << "FP DEBUG: EMERGENCY OVERRIDE - Forcing 10 test values" << endl;
-        bufferIndex = 0;
-        for (int i = 0; i < 10; i++) {
-            dataBuffer[bufferIndex++] = 300.0 + i;  // Test values
-            valuesWritten++;
-        }
-        Info << "FP DEBUG: Forced " << valuesWritten << " test values" << endl;
-    }
-    */
+    // Log statistics about the write operation
+    lastWriteCount_ = valuesWritten;
+    Info << "FP DEBUG: FluidTemperature::write completed with " << 
+        valuesWritten << " temperature values written" << endl;
     
-    return bufferIndex; // Return number of buffer elements used
+    return bufferIndex;
 }
 
 // Read implementation (No-Op for this class)

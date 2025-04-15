@@ -22,41 +22,71 @@ inline int Simulate(int argc, const char** argv) {
   const double domain_min_z = 0.0;
   const double domain_max_z = 1.0;
   
-  Log::Info("Simulate", "DEBUG: OpenFOAM domain bounds: X[", domain_min_x, ",", domain_max_x, 
-           "], Y[", domain_min_y, ",", domain_max_y, "], Z[", domain_min_z, ",", domain_max_z, "]");
+  // OpenFOAM mesh details from blockMeshDict (50×50×50 cells)
+  const int openfoam_cells_per_dim = 50;
+  const double openfoam_cell_size = 1.0 / openfoam_cells_per_dim; // 0.02 units
   
-  // Create cells in a grid pattern
-  const int num_cells = 10;
-  for (int i = 0; i < num_cells; i++) {
-    double x = 0.1 + (i % 3) * 0.3; // Spread across x (3 columns)
-    double y = 0.1 + (i / 3) * 0.3; // Spread across y (4 rows)
-    double z = 0.5;                 // All at same z height
-    
-    // Verify position is within domain bounds
-    bool in_domain = (x >= domain_min_x && x <= domain_max_x &&
-                     y >= domain_min_y && y <= domain_max_y &&
-                     z >= domain_min_z && z <= domain_max_z);
-    
-    if (!in_domain) {
-      Log::Warning("Simulate", "DEBUG: Cell position (", x, ",", y, ",", z, 
-                  ") is OUTSIDE OpenFOAM domain bounds!");
+  Log::Info("Simulate", "OpenFOAM domain: ", domain_min_x, "-", domain_max_x, " × ",
+            domain_min_y, "-", domain_max_y, " × ", domain_min_z, "-", domain_max_z);
+  Log::Info("Simulate", "OpenFOAM mesh: ", openfoam_cells_per_dim, "×", openfoam_cells_per_dim, 
+            "×", openfoam_cells_per_dim, " cells (cell size: ", openfoam_cell_size, ")");
+  
+  // BioDynaMo agent parameters
+  const int agents_per_dim = 10; // 10×10×10 = 1000 agents
+  double cell_diameter = 0.01; // Cell diameter (smaller than OpenFOAM cell size)
+  
+  // We'll still define an initial temperature as a fallback value
+  // But we'll read it from OpenFOAM when possible
+  double initial_temp = 300.0; // Default initial temperature if preCICE fails
+  
+  // Calculate step size to evenly distribute BioDynaMo agents across the domain
+  int step = openfoam_cells_per_dim / agents_per_dim; // Step = 5 for 10 agents per dimension
+  
+  Log::Info("Simulate", "Creating BioDynaMo agents in a ", agents_per_dim, "×", 
+            agents_per_dim, "×", agents_per_dim, " grid (", 
+            agents_per_dim*agents_per_dim*agents_per_dim, " total agents)");
+  
+  int cell_count = 0;
+  
+  // Create BioDynaMo agents at the centers of selected OpenFOAM cells
+  for (int i = 0; i < agents_per_dim; i++) {
+    for (int j = 0; j < agents_per_dim; j++) {
+      for (int k = 0; k < agents_per_dim; k++) {
+        // Calculate OpenFOAM cell indices (evenly distributed)
+        int of_cell_i = i * step + step/2; // Add half step to get to middle cells
+        int of_cell_j = j * step + step/2;
+        int of_cell_k = k * step + step/2;
+        
+        // Calculate the exact center position of this OpenFOAM cell
+        double pos_x = (of_cell_i + 0.5) * openfoam_cell_size;
+        double pos_y = (of_cell_j + 0.5) * openfoam_cell_size;
+        double pos_z = (of_cell_k + 0.5) * openfoam_cell_size;
+        
+        // Create a BioDynaMo agent (cell) at the exact center of this OpenFOAM cell
+        MyCell* cell = new MyCell({pos_x, pos_y, pos_z});
+        cell->SetDiameter(cell_diameter);
+        cell->SetTemperature(initial_temp); // Initially set to default value, will be updated with OpenFOAM data
+        rm->AddAgent(cell);
+        
+        // Log cell creation (limit output)
+        if (cell_count % 100 == 0 || cell_count < 5 || cell_count > 995) {
+          Log::Info("Simulate", "Created agent ", cell_count, 
+                   " at position (", pos_x, ", ", pos_y, ", ", pos_z, ")",
+                   " - center of OpenFOAM cell [", of_cell_i, ", ", of_cell_j, ", ", of_cell_k, "]");
+        }
+        
+        cell_count++;
+      }
     }
-    
-    // Create cell and add to simulation
-    MyCell* cell = new MyCell({x, y, z});
-    cell->SetDiameter(0.01);
-    cell->SetTemperature(300.0); // Initial temperature
-    rm->AddAgent(cell);
-    
-    Log::Info("Simulate", "Created cell ", i, " at position (", x, ", ", y, ", ", z, 
-             "), domain check: ", (in_domain ? "INSIDE" : "OUTSIDE"));
   }
+  
+  Log::Info("Simulate", "Created ", cell_count, " agents at centers of OpenFOAM volume cells");
   
   // Verify cells were created
   uint64_t total_cells = rm->GetNumAgents();
-  Log::Info("Simulate", "Created ", total_cells, " cells");
+  Log::Info("Simulate", "Total agents in resource manager: ", total_cells);
   
-  // Added verification: Check all cell positions again after creation
+  // Verify all cells are within domain
   int cells_in_domain = 0;
   int cells_outside_domain = 0;
   
@@ -100,6 +130,68 @@ inline int Simulate(int argc, const char** argv) {
   // 3. Initialize preCICE AFTER mesh registration is complete
   Log::Info("Simulate", "Initializing preCICE connection...");
   adapter.Initialize();
+  
+  // --- EXPLICIT AGENT TEMPERATURE INITIALIZATION FROM OPENFOAM ---
+  Log::Info("Simulate", "Initializing agent temperatures from OpenFOAM data...");
+  std::vector<double> initial_temperatures;
+  adapter.ReadTemperature(initial_temperatures);
+  
+  if (!initial_temperatures.empty()) {
+    std::cout << "INITIALIZATION: Successfully received " << initial_temperatures.size() 
+              << " initial temperature values from OpenFOAM" << std::endl;
+    
+    // Apply initial temperature values to cells
+    size_t idx = 0;
+    double min_init_temp = std::numeric_limits<double>::max();
+    double max_init_temp = std::numeric_limits<double>::lowest();
+    double sum_init_temp = 0.0;
+    int cells_initialized = 0;
+    
+    rm->ForEachAgent([&](Agent* agent) {
+      if (auto* cell = dynamic_cast<MyCell*>(agent)) {
+        if (idx < initial_temperatures.size()) {
+          double temp = initial_temperatures[idx];
+          double default_temp = cell->GetTemperature();
+          cell->SetTemperature(temp);
+          
+          // Log the first few cells for verification
+          if (idx < 5 || idx > initial_temperatures.size() - 5) {
+            const auto& pos = cell->GetPosition();
+            std::cout << "INITIALIZATION: Cell at (" << pos[0] << ", " << pos[1] << ", " << pos[2]
+                     << ") initialized with temperature " << temp 
+                     << " (was default: " << default_temp << ")" << std::endl;
+          }
+          
+          // Track temperature stats
+          min_init_temp = std::min(min_init_temp, temp);
+          max_init_temp = std::max(max_init_temp, temp);
+          sum_init_temp += temp;
+          cells_initialized++;
+          
+          idx++;
+        } else {
+          if (idx == initial_temperatures.size()) { // Print only once to avoid log spam
+            std::cout << "INITIALIZATION: More cells than temperature values available" << std::endl;
+          }
+          idx++;
+        }
+      }
+    });
+    
+    // Log initialization statistics
+    if (cells_initialized > 0) {
+      double avg_temp = sum_init_temp / cells_initialized;
+      std::cout << "INITIALIZATION: Successfully initialized " << cells_initialized 
+                << " agent temperatures from OpenFOAM data" << std::endl;
+      std::cout << "INITIALIZATION: Temperature stats - Min: " << min_init_temp 
+                << ", Max: " << max_init_temp << ", Avg: " << avg_temp << std::endl;
+    } else {
+      std::cout << "INITIALIZATION: WARNING - No cells were initialized with temperature data" << std::endl;
+    }
+  } else {
+    std::cout << "INITIALIZATION: Failed to receive initial temperature data from OpenFOAM. "
+              << "Using default temperature value (" << initial_temp << ")" << std::endl;
+  }
   
   // --- Run simulation ---
   double dt = adapter.GetMaxTimeStep();

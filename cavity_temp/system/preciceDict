@@ -21,7 +21,8 @@ interfaces
   {
     mesh              VolumeMesh;
     patches           ();            // Leave empty for volumetric exchange
-    cellSets          (box1);        // Defined by topoSet
+    // cellSets          (box1);        // Defined by topoSet
+    cellSets          ();        // Defined by topoSet
     locations         volumeCenters;
 
     readData ();
